@@ -84,9 +84,9 @@ builder.Services
 ```
 
 Sobre:
-`AddIdentity<User, IdentityRole>()`: Diz ao Identity aplicar o conceito de identidade para a classe `User` e que a parte de autorização será gerenciada também por ele.
-`AddEntityFrameworkStores<ApiDbContext>()`: Diz ao Identity usamos o contexto `ApiDbContext` para nos comunicarmos com o banco de dados.
-`AddDefaultTokenProviders()`: Diz ao Identity a gestão de tokens será responsabilidade dele.
+- `AddIdentity<User, IdentityRole>()`: Diz ao Identity aplicar o conceito de identidade para a classe `User` e que a parte de autorização será gerenciada também por ele.
+- `AddEntityFrameworkStores<ApiDbContext>()`: Diz ao Identity usamos o contexto `ApiDbContext` para nos comunicarmos com o banco de dados.
+- `AddDefaultTokenProviders()`: Diz ao Identity a gestão de tokens será responsabilidade dele.
 
 Nesse ponto, já podemos gerar a migration com `Add-Migration InitialCreate` e atualizar o banco com `Update-Database`.
 
@@ -219,6 +219,8 @@ public class UserController : ControllerBase
         return Ok(await _authService.SignUp(dto));
 	}
 }
+//...
+```
 
 Tanto o `_mapper` quanto o `_userManager` são injetados automaticamente pelo ASP.NET Core por debaixo dos panos, ao configurarmos os pacotes. Para injeções customizadas, precisamos fazer esse processo manualmente.
 
