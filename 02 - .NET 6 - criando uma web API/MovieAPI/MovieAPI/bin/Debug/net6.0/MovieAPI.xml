@@ -1,0 +1,88 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>MovieAPI</name>
+    </assembly>
+    <members>
+        <member name="M:MovieAPI.Controllers.MovieController.Create(MovieAPI.Data.Dtos.CreateMovieDto)">
+             <summary>
+             Creates a movie
+             </summary>
+             <remarks>
+             Sample request:
+            
+                 POST /Movie
+                 {
+                    "title": "Movie title",
+                    "genre": "Movie genre",
+                    "duration": 120
+                 }
+            
+             </remarks>
+             <param name="movieDto"></param>
+             <returns>A newly created movie</returns>
+             <response code="201">Returns the newly created movie</response>
+             <response code="400">If the item is null</response>
+        </member>
+        <member name="T:MovieAPI.Migrations.CriacaoInicial">
+            <inheritdoc />
+        </member>
+        <member name="M:MovieAPI.Migrations.CriacaoInicial.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:MovieAPI.Migrations.CriacaoInicial.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:MovieAPI.Migrations.CriacaoInicial.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="T:MovieAPI.Migrations.CinemaeEndereco">
+            <inheritdoc />
+        </member>
+        <member name="M:MovieAPI.Migrations.CinemaeEndereco.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:MovieAPI.Migrations.CinemaeEndereco.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:MovieAPI.Migrations.CinemaeEndereco.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="T:MovieAPI.Migrations.AddSessionToMovie">
+            <inheritdoc />
+        </member>
+        <member name="M:MovieAPI.Migrations.AddSessionToMovie.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:MovieAPI.Migrations.AddSessionToMovie.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:MovieAPI.Migrations.AddSessionToMovie.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="T:MovieAPI.Migrations.AddSessionToCine">
+            <inheritdoc />
+        </member>
+        <member name="M:MovieAPI.Migrations.AddSessionToCine.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:MovieAPI.Migrations.AddSessionToCine.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:MovieAPI.Migrations.AddSessionToCine.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="T:MovieAPI.Migrations.AddSessionToMovieAndCine">
+            <inheritdoc />
+        </member>
+        <member name="M:MovieAPI.Migrations.AddSessionToMovieAndCine.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:MovieAPI.Migrations.AddSessionToMovieAndCine.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:MovieAPI.Migrations.AddSessionToMovieAndCine.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+    </members>
+</doc>
