@@ -5,6 +5,14 @@ namespace API.Data.Dtos;
 public class SignUpDto
 {
     [Required]
+    public string Name { get; set; } = null!;
+
+
+    [Required]
+    [EmailAddress]
+    public string Email { get; set; } = null!;
+
+    [Required]
     public string Username { get; set; } = null!;
 
     [Required]

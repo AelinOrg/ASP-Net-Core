@@ -7,9 +7,11 @@ O Identity é um framework que nos permite gerenciar usuários, senhas, perfis e p
 ## Iniciando...
 Com o projeto de API configurado, e com a base de usuários criada (banco, pacotes, modelo, mapeamento, DTOs, etc), vamos começar a implementar o Identity. Antes, vale ressaltar alguns decorators:
 
-`[Compare]`: Usado na validação, é útil para, por exemplo, comparar a senha e a senha de confirmação.
-`[DatabaseGenerated(DatabaseGeneratedOption.Identity)]`: Usado para indicar que o campo é gerado pelo banco de dados.
-`[DatabaseGenerated(DatabaseGeneratedOption.Computed)]`: Usado para indicar que o campo é gerado pelo banco de dados, mas não é um campo de chave primária.
+- `[Compare]`: Usado na validação, é útil para, por exemplo, comparar a senha e a senha de confirmação.
+- `[DatabaseGenerated(DatabaseGeneratedOption.Identity)]`: Usado para indicar que o campo é gerado pelo banco de dados.
+- `[DatabaseGenerated(DatabaseGeneratedOption.Computed)]`: Usado para indicar que o campo é gerado pelo banco de dados, mas não é um campo de chave primária.
+- `[DataType(DataType.Password)]`: Usado para indicar que o campo é uma senha.
+
 
 ## Configurando o banco
 Antes de tudo, precisamos dos seguintes pacotes:
@@ -199,7 +201,6 @@ public class AuthService
 }
 ```
 
-
 Agora, vamos alterar o controller:
 
 ```csharp
@@ -248,4 +249,382 @@ Sobre a adição de dependências, temos três opções:
 - `AddTransient`: Uma instância é criada toda vez que o serviço é requisitado.
 - `AddScoped`: Uma instância é criada por requisição.
 - `AddSingleton`: Uma instância é criada por aplicação.
+
+## Efetuando o login
+Para efetuar o login, precisamos de um `LoginDto`:
+
+```csharp
+using System.ComponentModel.DataAnnotations;
+
+namespace API.Data.Dtos;
+
+public class LoginDto
+{
+	[Required]
+	public string Username { get; set; } = null!;
+
+	[Required]
+	[DataType(DataType.Password)]
+	public string Password { get; set; } = null!;
+}
+```
+
+Agora, vamos criar um método para efetuar o login no `AuthService`:
+
+```csharp
+//...
+
+namespace API.Services;
+
+public class AuthService
+{
+    //...
+    private readonly SignInManager<User> _signInManager;
+
+    public AuthService(IMapper mapper, UserManager<User> userManager, SignInManager<User> signInManager)
+    {
+        //...
+        _signInManager = signInManager;
+    }
+
+    //...
+
+    public async Task<User> Login(LoginDto dto)
+    {
+        User? user = await _userManager.FindByEmailAsync(dto.Email);
+
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException("Invalid email or password");
+        }
+
+        SignInResult result = await _signInManager.PasswordSignInAsync(user, dto.Password, false);
+
+        if (!result.Succeeded)
+        {
+            throw new UnauthorizedAccessException("Invalid email or password");
+        }
+
+        return user;
+    }
+}
+```
+
+Como vemos, o Identity nos fornece o `SignInManager<User>`, que é responsável por gerenciar o login do usuário. O método `PasswordSignInAsync` recebe o usuário, a senha, e um booleano que indica se o cookie deve ser persistido ("remember me") e, por fim, um booleano que indica se o usuário deve ser bloqueado caso o login falhe. O método retorna um `SignInResult`, que indica se o login foi bem sucedido ou não. Caso exista alguma falha, lançamos uma exceção 401 por meio do `UnauthorizedAccessException`.
+
+Além do `PasswordSignInAsync`, temos o `CheckPasswordSignInAsync`, que, diferente do método usado, não possui a opção relacionada aos cookies e, mais importante, não realiza o login. O `PasswordSignInAsync` oferece mais recursos, como a verificação de dois fatores, confirmação de email, etc, por isso, atente-se ao método escolhido e as configurações. Ele possui uma sobrecarga, que recebe o username e faz a mesma checagem feita com o `FindByEmailAsync`. No nosso caso, estamos usando o email.
+
+## Gerando o token
+Começaremos instalando o pacote `System.IdentityModel.Tokens.Jwt`. Com ele, podemos gerar tokens JWT, que é uma string de acesso que contém informações do usuário, como o username, o email, o id, etc. Não é recomendado armazenar informações sensíveis, como a senha.
+
+Agora, vamos criar um método para gerar o token no `AuthService`:
+
+```csharp
+//...
+using System.IdentityModel.Tokens.Jwt;
+using System.Text;
+using Microsoft.IdentityModel.Tokens;
+
+namespace API.Services;
+
+public class AuthService
+{
+	//...
+
+	private static string GenerateToken(User user)
+	{
+		JwtSecurityTokenHandler tokenHandler = new();
+		byte[] key = Encoding.ASCII.GetBytes("hash");
+
+		SecurityTokenDescriptor tokenDescriptor = new()
+		{
+			Subject = new ClaimsIdentity(new Claim[]
+			{
+				new Claim(ClaimTypes.Name, user.UserName),
+				new Claim(ClaimTypes.Email, user.Email),
+				new Claim(ClaimTypes.NameIdentifier, user.Id)
+			}),
+			Expires = DateTime.UtcNow.AddDays(7),
+			SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+		};
+
+		SecurityToken token = tokenHandler.CreateToken(tokenDescriptor);
+
+		return tokenHandler.WriteToken(token);
+	}
+}
+```
+
+Não é seguro armazenar a chave de segurança diretamente no código, como fizemos. O ideal é armazenar em um arquivo de configuração, como o `appsettings.json`. No entanto, para fins didáticos, deixaremos a chave, fraca, diretamente no código.
+
+Sobre as funcionalidades:
+- `JwtSecurityTokenHandler`: É responsável por gerar o token.
+- `SecurityTokenDescriptor`: É responsável por configurar o token. Nele, definimos o `Subject`, que é o usuário, a data de expiração, e as credenciais de assinatura, que é a chave de segurança.
+- `SigningCredentials`: É responsável por assinar o token. Nele, definimos o algoritmo de assinatura e a chave de segurança.
+- `SecurityToken`: É o token em si no formato de objeto.
+- `WriteToken`: É responsável por escrever o token.
+- `Claim`: É uma informação do usuário que será armazenada no token. O `ClaimTypes` é uma classe que possui diversos tipos de claims, como o `Name`, `Email`, `NameIdentifier`, etc.
+
+O método `GenerateToken` será usado no método `Login` do serviço:
+
+```csharp
+//...
+public class AuthService
+{
+	//...
+	public async Task<string> Login(LoginDto dto)
+	{
+		//...
+		return GenerateToken(user);
+	}
+}
+```
+
+No controller, apenas corrige o retorno do método:
+
+```csharp
+//...
+public class UserController : ControllerBase
+{
+	//...
+	[HttpPost("login")]
+	public async Task<ActionResult<string>> Login(LoginDto dto)
+	{
+		return Ok(await _authService.Login(dto));
+	}
+}
+```
+
+Alternativamente, a geração do token poderia ser realizada da seguinte forma:
+
+```csharp
+//...
+private static string GenerateToken(User user)
+{
+    byte[] key = Encoding.ASCII.GetBytes("hash");
+
+    var token = new JwtSecurityToken
+    (
+        claims: new Claim[]
+        {
+            new Claim(ClaimTypes.Name, user.Name!),
+            new Claim(ClaimTypes.NameIdentifier, user.UserName!),
+            new Claim(ClaimTypes.Email, user.Email!),
+            new Claim(ClaimTypes.NameIdentifier, user.Id)
+        },
+        expires: DateTime.UtcNow.AddDays(7),
+        signingCredentials: new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+    );
+
+    return new JwtSecurityTokenHandler().WriteToken(token);
+//...
+```
+# Controle de acesso
+
+## Criando a política de acesso
+Antes de prosseguirmos, instale o pacote `Microsoft.AspNetCore.Authentication.JwtBearer`. Ele é responsável por validar o token JWT.
+
+Para fins de estudo, o nosso objetivo é criar uma política de acesso que exija que o usuário esteja autenticado para acessar determinadas rotas. Para isso, vamos criar uma classe `AuthPolicy` em `API/Authorization`. Note que, assim como para verificação de role, é possível usar uma política pré-existente, através do `AddPolicy`:
+
+```csharp
+//...
+builder.Services.AddAuthorization(options =>
+{
+	options.AddPolicy("RequireAuth", policy => policy.RequireAuthenticatedUser());
+});
+//...
+```
+
+Porém, para fins de estudo, vamos criar uma política personalizada:
+
+```csharp
+using Microsoft.AspNetCore.Authorization;
+
+namespace API.Authorization;
+
+public class AuthPolicy: IAuthorizationRequirement
+{
+}
+```
+
+Agora, vamos criar um handler para a política:
+
+```csharp
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
+
+namespace API.Authorization;
+
+public class AuthPolicyHandler: AuthorizationHandler<AuthPolicy>
+{
+	protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, AuthPolicy requirement)
+	{
+		if (context.User.Identity?.IsAuthenticated == true)
+		{
+			context.Succeed(requirement);
+		}
+
+		return Task.CompletedTask;
+	}
+}
+```
+
+O método `HandleRequirementAsync` é responsável por verificar se o usuário está autenticado. Caso esteja, a política é satisfeita, caso contrário, falha. O método `Succeed` é responsável por indicar que a política foi satisfeita.
+
+Agora, vamos registrar a política no `Program.cs`:
+
+```csharp
+//...
+builder.Services.AddSingleton<IAuthorizationHandler, AuthPolicyHandler>();
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("RequireAuth", policy => policy.AddRequirements(new AuthPolicy()));
+});
+//...
+```
+
+Agora, vamos aplicar a política em uma rota:
+
+```csharp
+//...
+[HttPost("test")]
+[Autorize("RequireAuth")]
+public ActionResult Test()
+{
+	return Ok("Test");
+}
+//...
+```
+
+## Autenticando via token
+Além da nossa própria política, podemos utilizar outros recursos a partir do token JWT. Por exemplo, podemos usar o `Authorize` para verificar se o usuário está autenticado e, se estiver, podemos usar o `Authorize(Roles = "Admin")` para verificar se o usuário possui a role de administrador. Para isso, precisamos configurar o `JwtBearerDefaults.AuthenticationScheme`:
+
+```csharp
+//...
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+	.AddJwtBearer(options =>
+	{
+		options.TokenValidationParameters = new TokenValidationParameters
+		{
+			ValidateIssuer = false,
+			ValidateAudience = false,
+			ValidateLifetime = true,
+			ValidateIssuerSigningKey = true,
+			IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes("hash")),
+            ClockSkew = TimeSpan.Zero
+		};
+	});
+//...
+
+app.UseAuthentication();
+```
+
+Expliquemos os parâmetros:
+- `ValidateIssuer`: Indica se o emissor do token deve ser validado.
+- `ValidateAudience`: Indica se o destinatário do token deve ser validado.
+- `ValidateLifetime`: Indica se a validade do token deve ser validada.
+- `ValidateIssuerSigningKey`: Indica se a chave de assinatura deve ser validada.
+- `IssuerSigningKey`: Indica a chave de assinatura (a mesma usada para assinar o token).
+- `ClockSkew`: Indica o tempo de tolerância para a validade do token. No nosso caso, estamos dizendo que o token deve ser válido até o momento em que expira, sem tolerância.
+
+Inicialmente, indicamos que o padrão de autenticação é o `JwtBearerDefaults.AuthenticationScheme`. Ao fim, usamos o `UseAuthentication` para indicar que a autenticação será feita por meio do token JWT.
+
+Essa configuração é importante para outros cenários. Digamos que queremos obter a claim de data de nascimento do token. Para isso, podemos usar, dentre as opções, o `HttpContext.User.Claims`, por exemplo, que retorna uma lista de claims. No entanto, se não configurarmos o `JwtBearerDefaults.AuthenticationScheme`, o `HttpContext.User` será nulo.
+
+Agora, vamos aplicar o `Authorize` em uma rota:
+
+```csharp
+//...
+[HttpGet("test")]
+[Authorize]
+public ActionResult Test()
+{
+	return Ok("Test");
+}
+//...
+```
+
+# Utilizando secrets
+
+## O problema de dados expostos
+Quando trabalhamos com dados sensíveis, como chaves de segurança, senhas, etc, não é recomendado armazenar diretamente no código. O ideal é armazenar em um arquivo de configuração. A Microsoft oferece o `Secret Manager`, que é um gerenciador de segredos, e também por meio de variáveis de ambiente. Veja a [documentação](https://learn.microsoft.com/pt-br/aspnet/core/security/app-secrets?view=aspnetcore-7.0&tabs=windows) para mais informações.
+
+O gerenciador de segredos, usado por meio da linha de comando, é útil para desenvolvimento, mas não é recomendado para produção. Para produção, o ideal é usar variáveis de ambiente.
+
+Na nossa aplicação atual, estamos, incorretamente, armazenando a chave de segurança e a connection string diretamente no código. Vamos corrigir isso.
+
+## Aplicando secrets ao projeto
+A principio, iniciamos o Secret no nosso projeto, obtendo um secret user id (é inserido no arquivo `.csproj`):
+
+```bash
+dotnet user-secrets init
+```
+
+Em seguida, adicionamos a chave de segurança e a connection string:
+
+
+```bash
+dotnet user-secrets set "SigningKey" <chave>
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" server=<host>;user=<user>;password=<senha>;database=<db>
+```
+
+Será criado um arquivo `secrets.json` na pasta `C:\Users\<user>\AppData\Roaming\Microsoft\UserSecrets\<user_secrets_id>\secrets.json`.
+
+Note que, para a connection string, usamos o formato `key:value`. Isso é necessário para que o Secret Manager consiga ler a connection string. Lembre-se de remove-la do `appsettings.json`.
+
+Agora, vamos alterar o `Program.cs`:
+
+```csharp
+//...
+var connectionString = builder.Configuration["ConnectionStrings:DefaultConnection"];
+
+//...
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            //...
+            IssuerSigningKey = new SymmetricSecurityKey
+            (
+                Encoding.ASCII.GetBytes(builder.Configuration["SigningKey"])
+            ),
+        };
+    });
+//...
+```
+
+E também no `GenerateToken` do `AuthService`:
+
+```csharp
+//...
+
+namespace API.Services;
+
+public class AuthService
+{
+    //...
+    private readonly IConfiguration _configuration;
+
+
+    public AuthService(IMapper mapper, UserManager<User> userManager, SignInManager<User> signInManager, IConfiguration configuration)
+    {
+        //...
+        _configuration = configuration;
+    }
+
+    //...
+
+    private string GenerateToken(User user)
+    {
+        JwtSecurityTokenHandler tokenHandler = new();
+        byte[] key = Encoding.ASCII.GetBytes(_configuration["SigningKey"]);
+
+        //...
+    }
+}
+```
+
+Repare que o método `GenerateToken` deixou de ser estático. Isso é necessário porque estamos acessando um membro da instância, o `_configuration`.
 

@@ -1,8 +1,13 @@
 using System.Reflection;
+using System.Text;
+using API.Authorization;
 using API.Data;
 using API.Models;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,6 +37,30 @@ builder.Services
     .AddEntityFrameworkStores<ApiDbContext>()
     .AddDefaultTokenProviders();
 
+builder.Services.AddSingleton<IAuthorizationHandler, AuthPolicyHandler>();
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("RequireAuth", policy => policy.AddRequirements(new AuthPolicy()));
+});
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = false,
+            ValidateAudience = false,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey
+            (
+                Encoding.ASCII.GetBytes(builder.Configuration["SigningKey"])
+            ),
+            ClockSkew = TimeSpan.Zero
+        };
+    });
+
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 
 builder.Services.AddControllers();
@@ -50,6 +79,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
