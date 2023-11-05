@@ -59,4 +59,4 @@ Muitas vezes, desenvolvedores usam a sigla URI (Uniform Resource Identifier) qua
 - **Resposta 2 (mais elaborada)**: Uma URL é uma URI, mas nem todas as URI's são URL's! Existem URI's que identificam um recurso sem definir o endereço, nem o protocolo. Em outras palavras, uma URL representa uma identificação de um recurso (URI) através do endereço, mas nem todas as identificações são URL's.
 
 Existe um outro padrão que se chama URN (Uniform Resource Name). Os URN's também são URI's! Um URN segue também uma sintaxe bem definida, algo assim **urn:cursos:alura:course:introducao-html-css**. Repare que criamos uma outra identificação do curso Introdução ao HTML e CSS da Alura, mas essa identificação não é um endereço. 
-![Imagem](/assets/uri_url.png)
+![Imagem](./assets/uri_url.png)
