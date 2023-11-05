@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using API.Data.Enums;
 
 namespace API.Data.Dtos;
 
@@ -7,16 +8,14 @@ public class SignUpDto
     [Required]
     public string Name { get; set; } = null!;
 
+    // Role
+    [Required]
+    [EnumDataType(typeof(UserRoleEnum))]
+    public string Role { get; set; } = null!;
 
     [Required]
     [EmailAddress]
     public string Email { get; set; } = null!;
-
-    [Required]
-    public string Username { get; set; } = null!;
-
-    [Required]
-    public DateTime BirthDate { get; set; }
 
     [Required]
     [DataType(DataType.Password)]

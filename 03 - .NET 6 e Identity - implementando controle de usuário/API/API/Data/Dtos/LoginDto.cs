@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using API.Data.Validation;
 
 namespace API.Data.Dtos;
 
@@ -9,7 +10,8 @@ public class LoginDto
     public string Email { get; set; } = null!;
 
     [Required]
-    [MinLength(6)]
-    [DataType(DataType.Password)]
     public string Password { get; set; } = null!;
+
+    [IsBoolean(IsOptional = true)]
+    public bool? IsPersistent { get; set; }
 }

@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace API.Data;
 
-public class ApiDbContext: IdentityDbContext<User>
+public class ApiDbContext : IdentityDbContext<User>
 {
     public ApiDbContext(DbContextOptions<ApiDbContext> options) : base(options)
     {

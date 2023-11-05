@@ -566,7 +566,7 @@ Em seguida, adicionamos a chave de segurança e a connection string:
 
 ```bash
 dotnet user-secrets set "SigningKey" <chave>
-dotnet user-secrets set "ConnectionStrings:DefaultConnection" server=<host>;user=<user>;password=<senha>;database=<db>
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "server=<host>;user=<user>;password=<senha>;database=<db>"
 ```
 
 Será criado um arquivo `secrets.json` na pasta `C:\Users\<user>\AppData\Roaming\Microsoft\UserSecrets\<user_secrets_id>\secrets.json`.
