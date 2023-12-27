@@ -1,10 +1,12 @@
 {
   "ExpandedNodes": [
     "",
+    "\\api-alurabooks",
+    "\\assets",
     "\\curso-react-alurabooks",
-    "\\curso-react-alurabooks\\src",
     "\\curso-react-alurabooks\\src\\paginas",
     "\\curso-react-alurabooks\\src\\paginas\\Home"
   ],
+  "SelectedNode": "\\api-alurabooks\\server.js",
   "PreviewInSolutionExplorer": false
 }
